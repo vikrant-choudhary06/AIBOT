@@ -6,7 +6,7 @@ from pyrogram.enums import ChatType
 
 import config
 from utils.logger import logger
-from utils.helpers import clean_text, is_hinglish, detect_tone, is_looping
+from utils.helpers import clean_text, is_hinglish, detect_tone, is_looping, is_duplicate_response
 from memory.sqlite_memory import (
     save_message,
     get_chat_history,
@@ -127,13 +127,17 @@ async def main_chat_handler(client: Client, message: Message):
     is_mentioned = False
     is_reply_to_me = False
 
-    # Check if mentioned
-    if self_user.username:
+    # Check if mentioned (supports username mentions, text mentions, and replies automatically via Pyrogram)
+    if message.mentioned:
+        is_mentioned = True
+
+    # Secondary check for username in text (just in case Pyrogram cache hasn't loaded entity details)
+    if not is_mentioned and self_user.username:
         username_lower = f"@{self_user.username.lower()}"
         if username_lower in raw_text.lower():
             is_mentioned = True
 
-    # Check if reply to me
+    # Secondary check for replies to me
     if message.reply_to_message:
         replied_msg = message.reply_to_message
         if replied_msg.from_user and replied_msg.from_user.id == self_user.id:
@@ -145,7 +149,7 @@ async def main_chat_handler(client: Client, message: Message):
         # In DMs, always reply
         should_reply = True
     elif is_mentioned or is_reply_to_me:
-        # In groups, reply if tagged or direct reply
+        # In groups, reply if tagged, text-mentioned, or directly replied to
         should_reply = True
     elif should_randomly_reply(chat_id):
         # Otherwise, check random group discussion participation
@@ -234,9 +238,8 @@ async def main_chat_handler(client: Client, message: Message):
             async for chunk in generate_response_stream(history, system_prompt):
                 accumulated_text += chunk
                 
-                # Check for loop/repetition protection on the fly
-                past_responses = await get_raw_history_texts(chat_id, limit=3)
-                if is_looping(accumulated_text, past_responses):
+                # Check for internal loop/repetition on the fly
+                if is_looping(accumulated_text):
                     logger.warning("Repetitive loop detected in Ollama response stream. Stopping.")
                     break
 
@@ -266,6 +269,17 @@ async def main_chat_handler(client: Client, message: Message):
                 # If generation was empty, do not send anything or remove placeholder
                 if placeholder:
                     await client.delete_messages(chat_id, placeholder.id)
+                return
+
+            # Check if this completed reply is a duplicate of recent history to avoid repeating ourselves
+            past_responses = await get_raw_history_texts(chat_id, limit=3)
+            if is_duplicate_response(final_reply, past_responses):
+                logger.warning(f"Discarding duplicate response in chat {chat_id}: '{final_reply}'")
+                if placeholder:
+                    try:
+                        await client.delete_messages(chat_id, placeholder.id)
+                    except Exception:
+                        pass
                 return
 
             # Simulate typing completion delay based on length

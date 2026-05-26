@@ -72,23 +72,15 @@ def detect_tone(text: str) -> str:
 
     return "casual"
 
-def is_looping(text: str, history: list[str], threshold: int = 3) -> bool:
+def is_looping(text: str) -> bool:
     """
-    Determines if the generated reply is looping or repeating previous outputs.
-    Checks if the response matches any recent replies exactly or has a high overlap.
+    Checks if the generated text is looping internally (repeating words or phrases).
     """
     if not text:
         return False
         
-    clean_reply = text.strip().lower()
-    
-    # Direct match check
-    for past_reply in history[-threshold:]:
-        if clean_reply == past_reply.strip().lower():
-            return True
-            
-    # Sub-phrase repetition check within the text itself (e.g. "hi hi hi hi")
-    words = clean_reply.split()
+    clean_text_val = text.strip().lower()
+    words = clean_text_val.split()
     if len(words) > 4:
         # Check if the text consists of the same word repeated
         if len(set(words)) == 1:
@@ -98,4 +90,17 @@ def is_looping(text: str, history: list[str], threshold: int = 3) -> bool:
         if len(pairs) > 3 and len(set(pairs)) <= len(pairs) // 3:
             return True
             
+    return False
+
+def is_duplicate_response(text: str, history: list[str], threshold: int = 3) -> bool:
+    """
+    Checks if the completed text is a duplicate of a recent past response.
+    """
+    if not text or not history:
+        return False
+    clean_reply = text.strip().lower()
+    # Check direct match with past history
+    for past_reply in history[-threshold:]:
+        if clean_reply == past_reply.strip().lower():
+            return True
     return False
