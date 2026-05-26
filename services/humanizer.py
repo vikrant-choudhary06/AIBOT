@@ -50,7 +50,7 @@ async def check_and_update_cooldown(chat_id: int) -> bool:
     If active, returns True (cooldown active, ignore).
     """
     now = time.time()
-    async with await get_db() as db:
+    async with get_db() as db:
         async with db.execute("SELECT last_reply_time FROM cooldowns WHERE chat_id = ?", (chat_id,)) as cursor:
             row = await cursor.fetchone()
             

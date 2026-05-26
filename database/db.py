@@ -1,23 +1,25 @@
+import contextlib
 import aiosqlite
 from config import DB_PATH
 from utils.logger import logger
 
+@contextlib.asynccontextmanager
 async def get_db():
     """
-    Returns an async connection to the SQLite database.
+    Returns an async connection to the SQLite database as a context manager.
     """
-    db = await aiosqlite.connect(DB_PATH)
-    # Enable WAL mode for better concurrency and foreign keys
-    await db.execute("PRAGMA journal_mode=WAL;")
-    await db.execute("PRAGMA foreign_keys=ON;")
-    return db
+    async with aiosqlite.connect(DB_PATH) as db:
+        # Enable WAL mode for better concurrency and foreign keys
+        await db.execute("PRAGMA journal_mode=WAL;")
+        await db.execute("PRAGMA foreign_keys=ON;")
+        yield db
 
 async def init_db():
     """
     Creates tables if they do not exist.
     """
     logger.info("Initializing SQLite database...")
-    async with await get_db() as db:
+    async with get_db() as db:
         # Create messages table for context memory
         await db.execute("""
             CREATE TABLE IF NOT EXISTS messages (

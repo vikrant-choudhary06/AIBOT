@@ -57,7 +57,7 @@ async def cmd_personality(client: Client, message: Message):
 @Client.on_message(filters.me & filters.command("clear_memory", prefixes="."))
 async def cmd_clear_memory(client: Client, message: Message):
     chat_id = message.chat.id
-    async with await get_db() as db:
+    async with get_db() as db:
         await db.execute("DELETE FROM messages WHERE chat_id = ?", (chat_id,))
         await db.execute("DELETE FROM chat_styles WHERE chat_id = ?", (chat_id,))
         await db.commit()

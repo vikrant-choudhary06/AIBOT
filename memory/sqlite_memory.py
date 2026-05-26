@@ -18,7 +18,7 @@ async def save_message(chat_id: int, message_id: int, sender_id: int, sender_nam
     is_ai_val = 1 if is_ai else 0
     timestamp = int(time.time())
     
-    async with await get_db() as db:
+    async with get_db() as db:
         await db.execute(
             """
             INSERT INTO messages (chat_id, message_id, sender_id, sender_name, text, timestamp, is_ai)
@@ -32,7 +32,7 @@ async def get_chat_history(chat_id: int, limit: int = 15) -> list[dict]:
     """
     Retrieves the last N messages for a chat formatted as Ollama chat history.
     """
-    async with await get_db() as db:
+    async with get_db() as db:
         async with db.execute(
             """
             SELECT sender_name, text, is_ai FROM messages 
@@ -62,7 +62,7 @@ async def get_raw_history_texts(chat_id: int, limit: int = 15) -> list[str]:
     """
     Helper to get raw text of last messages (e.g. for anti-loop verification).
     """
-    async with await get_db() as db:
+    async with get_db() as db:
         async with db.execute(
             "SELECT text FROM messages WHERE chat_id = ? ORDER BY timestamp DESC LIMIT ?",
             (chat_id, limit)
@@ -78,7 +78,7 @@ async def update_chat_style(chat_id: int, text: str):
     if not text or len(text.strip()) < 3:
         return
 
-    async with await get_db() as db:
+    async with get_db() as db:
         # Fetch current style data
         async with db.execute("SELECT style_data FROM chat_styles WHERE chat_id = ?", (chat_id,)) as cursor:
             row = await cursor.fetchone()
@@ -144,7 +144,7 @@ async def get_style_summary(chat_id: int) -> str:
     """
     Generates a concise style summary to inject into the system prompt.
     """
-    async with await get_db() as db:
+    async with get_db() as db:
         async with db.execute("SELECT style_data FROM chat_styles WHERE chat_id = ?", (chat_id,)) as cursor:
             row = await cursor.fetchone()
             
@@ -185,7 +185,7 @@ async def get_profile_summary(profile_id: int, is_group: bool = False) -> str:
     table = "group_profiles" if is_group else "user_profiles"
     col = "chat_id" if is_group else "user_id"
     
-    async with await get_db() as db:
+    async with get_db() as db:
         async with db.execute(f"SELECT summary FROM {table} WHERE {col} = ?", (profile_id,)) as cursor:
             row = await cursor.fetchone()
     return row[0] if row else ""
@@ -198,7 +198,7 @@ async def save_profile_summary(profile_id: int, summary: str, is_group: bool = F
     col = "chat_id" if is_group else "user_id"
     now = int(time.time())
     
-    async with await get_db() as db:
+    async with get_db() as db:
         await db.execute(
             f"INSERT OR REPLACE INTO {table} ({col}, summary, last_seen) VALUES (?, ?, ?)",
             (profile_id, summary, now)
@@ -207,7 +207,7 @@ async def save_profile_summary(profile_id: int, summary: str, is_group: bool = F
 
 # Whitelist / Blacklist Dynamic Storage
 async def add_chat_to_list(chat_id: int, list_type: str):
-    async with await get_db() as db:
+    async with get_db() as db:
         await db.execute(
             "INSERT OR REPLACE INTO whitelists (chat_id, list_type) VALUES (?, ?)",
             (chat_id, list_type)
@@ -215,12 +215,12 @@ async def add_chat_to_list(chat_id: int, list_type: str):
         await db.commit()
 
 async def remove_chat_from_list(chat_id: int):
-    async with await get_db() as db:
+    async with get_db() as db:
         await db.execute("DELETE FROM whitelists WHERE chat_id = ?", (chat_id,))
         await db.commit()
 
 async def get_dynamic_list(list_type: str) -> set[int]:
-    async with await get_db() as db:
+    async with get_db() as db:
         async with db.execute("SELECT chat_id FROM whitelists WHERE list_type = ?", (list_type,)) as cursor:
             rows = await cursor.fetchall()
     return {row[0] for row in rows}
