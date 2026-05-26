@@ -23,7 +23,8 @@ SESSION_STRING = os.getenv("SESSION_STRING")
 
 # Ollama AI Configuration
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/")
-MODEL_NAME = os.getenv("MODEL_NAME", "gemma:2b")
+PRIMARY_MODEL = os.getenv("PRIMARY_MODEL", "qwen2.5:7b")
+FALLBACK_MODEL = os.getenv("FALLBACK_MODEL", "mistral")
 
 # Helper to parse list of chat IDs
 def _parse_chat_ids(env_val: str) -> set[int]:

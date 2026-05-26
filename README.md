@@ -105,7 +105,8 @@ API_ID=your_api_id
 API_HASH=your_api_hash
 SESSION_STRING=your_session_string_from_step_3
 OLLAMA_URL=http://127.0.0.1:11434
-MODEL_NAME=gemma:2b
+PRIMARY_MODEL=qwen2.5:7b
+FALLBACK_MODEL=mistral
 ```
 
 ---

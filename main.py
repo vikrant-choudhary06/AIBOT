@@ -48,7 +48,7 @@ async def start_bot():
     if not ollama_ok:
         logger.critical(
             "Ollama verification failed. Please make sure Ollama is running and "
-            f"the model '{config.MODEL_NAME}' is pulled ('ollama pull {config.MODEL_NAME}')."
+            f"at least one model ('{config.PRIMARY_MODEL}' or '{config.FALLBACK_MODEL}') is pulled."
         )
         sys.exit(1)
 
