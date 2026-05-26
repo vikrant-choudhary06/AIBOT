@@ -1,5 +1,19 @@
 import sys
 import asyncio
+
+# --- Pyrogram Monkeypatch for Peer ID Invalid Bug ---
+try:
+    import pyrogram.utils
+    def robust_get_peer_type(peer_id: int) -> str:
+        if peer_id < 0:
+            if str(peer_id).startswith("-100"):
+                return "channel"
+            return "chat"
+        return "user"
+    pyrogram.utils.get_peer_type = robust_get_peer_type
+except ImportError:
+    pass
+
 from pyrogram import Client
 from utils.logger import logger
 import config

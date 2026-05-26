@@ -77,7 +77,7 @@ async def generate_response_stream(messages: list[dict], system_prompt: str, ret
                         logger.error(f"Ollama returned error: {response.status_code} - {err_text.decode('utf-8')}")
                         raise httpx.HTTPStatusError("Ollama Error", request=response.request, response=response)
                         
-                    async for line in response.iter_lines():
+                    async for line in response.aiter_lines():
                         if not line:
                             continue
                         try:
