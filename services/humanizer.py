@@ -7,8 +7,8 @@ from database.db import get_db
 from config import COOLDOWN_SECONDS, REPLY_CHANCE_GROUP
 from utils.logger import logger
 
-# Emojis suitable for quick reactions
-CASUAL_REACTIONS = ["👍", "😂", "🔥", "❤️", "😮", "🙌", "👀", "💯", "😎"]
+# Globally guaranteed basic Telegram reactions to avoid REACTION_INVALID errors
+CASUAL_REACTIONS = ["👍", "❤️", "🔥", "😂", "👏"]
 
 class TypingSimulator:
     """
@@ -69,25 +69,19 @@ async def check_and_update_cooldown(chat_id: int) -> bool:
 
 def calculate_reading_delay(message_text: str) -> float:
     """
-    Simulates reading speed: ~3-5 words per second + base processing delay.
+    Simulates a very brief reading speed to ensure rapid responses.
     """
     if not message_text:
-        return 0.5
-    word_count = len(message_text.split())
-    delay = (word_count / 4.0) + random.uniform(0.5, 1.2)
-    # Cap reading delay to 4 seconds max so the bot doesn't feel sluggish
-    return min(delay, 4.0)
+        return 0.1
+    # Highly optimized reading delay (0.1 to 0.4 seconds)
+    return random.uniform(0.1, 0.4)
 
 def calculate_typing_delay(response_text: str) -> float:
     """
-    Simulates typing speed: ~20-30 characters per second.
+    Simulates a very brief typing completion delay.
     """
-    if not response_text:
-        return 1.0
-    char_count = len(response_text)
-    delay = (char_count / 25.0) + random.uniform(0.5, 1.5)
-    # Cap typing delay to 6 seconds max
-    return min(delay, 6.0)
+    # Highly optimized typing completion delay (0.1 to 0.4 seconds)
+    return random.uniform(0.1, 0.4)
 
 def should_randomly_reply(chat_id: int) -> bool:
     """
@@ -113,5 +107,5 @@ async def send_reaction_safe(client: Client, chat_id: int, message_id: int, emoj
         await client.send_reaction(chat_id, message_id, emoji)
         return True
     except Exception as e:
-        logger.warning(f"Failed to send reaction to message {message_id} in {chat_id}: {e}")
+        logger.debug(f"Failed to send reaction to message {message_id} in {chat_id} (normal if chat has disabled reactions): {e}")
         return False

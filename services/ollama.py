@@ -4,6 +4,27 @@ import asyncio
 from config import OLLAMA_URL, PRIMARY_MODEL, FALLBACK_MODEL
 from utils.logger import logger
 
+async def preload_model(model_name: str):
+    """
+    Sends a dummy request to Ollama to load the model into memory.
+    This prevents cold start delays (taking 60s+ to respond to the first message).
+    """
+    logger.info(f"Preloading model '{model_name}' into server memory...")
+    try:
+        # 120 second timeout for loading large models
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            await client.post(
+                f"{OLLAMA_URL}/api/chat",
+                json={
+                    "model": model_name,
+                    "messages": [{"role": "user", "content": "hi"}],
+                    "stream": False
+                }
+            )
+        logger.info(f"Model '{model_name}' preloaded successfully.")
+    except Exception as e:
+        logger.warning(f"Could not preload model '{model_name}': {e}")
+
 async def verify_ollama_model() -> bool:
     """
     Verifies if Ollama is running and checks the status of configured models.
@@ -39,6 +60,12 @@ async def verify_ollama_model() -> bool:
                 logger.error(f"Please run: 'ollama pull {PRIMARY_MODEL}' or 'ollama pull {FALLBACK_MODEL}'")
                 return False
 
+            # Start preloading models in the background to prevent cold-start latency
+            if primary_ok:
+                asyncio.create_task(preload_model(PRIMARY_MODEL))
+            if fallback_ok:
+                asyncio.create_task(preload_model(FALLBACK_MODEL))
+
             return True
             
     except httpx.ConnectError:
@@ -61,14 +88,15 @@ async def _stream_with_model(model_name: str, messages: list[dict], system_promp
         "stream": True,
         "options": {
             "temperature": 0.7,
-            "num_predict": 180,  # Slightly increased limit for better quality replies
+            "num_predict": 70,  # Reduced from 180 to 70 for much faster CPU generation of short replies
         }
     }
     
     backoff = 1.0
     for attempt in range(retries):
         try:
-            async with httpx.AsyncClient(timeout=httpx.Timeout(60.0, connect=10.0)) as client:
+            # Increased timeout to 180.0s to accommodate slower CPU start-times/TTFT
+            async with httpx.AsyncClient(timeout=httpx.Timeout(180.0, connect=15.0)) as client:
                 async with client.stream("POST", url, json=payload) as response:
                     if response.status_code != 200:
                         err_text = await response.aread()
